@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LeetCode API Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #1a1a2e;
+            color: #fff;
+        }
+        input {
+            padding: 10px;
+            width: 300px;
+            margin-right: 10px;
+            border: 2px solid #4A90E2;
+            background: #0f0f1e;
+            color: #fff;
+            border-radius: 5px;
+        }
+        button {
+            padding: 10px 20px;
+            background: #4A90E2;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #357ABD;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            background: #0f0f1e;
+            border-radius: 5px;
+            border: 1px solid #333;
+        }
+        .success { color: #4ade80; }
+        .error { color: #f87171; }
+        .loading { color: #fbbf24; }
+    </style>
+</head>
+<body>
+    <h1>🔍 LeetCode API Test</h1>
+    <p>Enter your LeetCode username to test if the API can fetch your stats:</p>
+    
+    <div>
+        <input type="text" id="username" placeholder="Enter LeetCode username" />
+        <button onclick="testLeetCode()">Test</button>
+    </div>
+    
+    <div id="result"></div>
+
+    <script>
+        async function testLeetCode() {
+            const username = document.getElementById('username').value.trim();
+            const resultDiv = document.getElementById('result');
+            
+            if (!username) {
+                resultDiv.innerHTML = '<p class="error">❌ Please enter a username</p>';
+                return;
+            }
+            
+            resultDiv.innerHTML = '<p class="loading">⏳ Fetching data from APIs...</p>';
+            
+            const apis = [
+                {
+                    name: 'LeetCode Stats API (Heroku)',
+                    url: `https://leetcode-stats-api.herokuapp.com/${username}`,
+                    parser: (data) => {
+                        if (data && data.status === "success") {
+                            return {
+                                rating: data.ranking || 0,
+                                problems: data.totalSolved || 0,
+                                easy: data.easySolved || 0,
+                                medium: data.mediumSolved || 0,
+                                hard: data.hardSolved || 0,
+                            };
+                        }
+                        return null;
+                    }
+                },
+                {
+                    name: 'Alfa LeetCode API (Render)',
+                    url: `https://alfa-leetcode-api.onrender.com/${username}/solved`,
+                    parser: (data) => {
+                        if (data && data.solvedProblem !== undefined) {
+                            return {
+                                rating: data.ranking || 0,
+                                problems: data.solvedProblem || 0,
+                                easy: data.easySolved || 0,
+                                medium: data.mediumSolved || 0,
+                                hard: data.hardSolved || 0,
+                            };
+                        }
+                        return null;
+                    }
+                }
+            ];
+            
+            let html = '<h3>Testing APIs:</h3>';
+            let success = false;
+            
+            for (const api of apis) {
+                html += `<p><strong>${api.name}</strong></p>`;
+                try {
+                    const response = await fetch(api.url);
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        const parsed = api.parser(data);
+                        
+                        if (parsed) {
+                            html += `<p class="success">✅ Success! Found stats:</p>`;
+                            html += `<ul>
+                                <li>Total Problems: ${parsed.problems}</li>
+                                <li>Easy: ${parsed.easy}</li>
+                                <li>Medium: ${parsed.medium}</li>
+                                <li>Hard: ${parsed.hard}</li>
+                                <li>Ranking: ${parsed.rating}</li>
+                            </ul>`;
+                            success = true;
+                            break;
+                        } else {
+                            html += `<p class="error">❌ Invalid response format</p>`;
+                        }
+                    } else {
+                        html += `<p class="error">❌ HTTP ${response.status}: ${response.statusText}</p>`;
+                    }
+                } catch (error) {
+                    html += `<p class="error">❌ Error: ${error.message}</p>`;
+                }
+            }
+            
+            if (!success) {
+                html += '<p class="error"><br/>❌ All APIs failed. Possible reasons:</p>';
+                html += '<ul>';
+                html += '<li>Username is incorrect or doesn\'t exist</li>';
+                html += '<li>APIs are temporarily down</li>';
+                html += '<li>Network/CORS issues</li>';
+                html += '</ul>';
+            }
+            
+            resultDiv.innerHTML = html;
+        }
+        
+        // Allow Enter key to trigger test
+        document.getElementById('username').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                testLeetCode();
+            }
+        });
+    </script>
+</body>
+</html>
